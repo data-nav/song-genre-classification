@@ -45,10 +45,58 @@ This project involves classifying songs into two genres—Rock and Hip-Hop—usi
   After balancing the dataset, both models showed improved performance, with Logistic Regression performing slightly better in classifying the less prevalent Hip-Hop genre.
 
 ## Code
-
-The code for this project is organized into the following key sections:
-
 - Data Loading and Preprocessing
 - Feature Extraction and Normalization
 - Model Training and Evaluation
 - Cross-Validation
+
+import joblib
+
+# Train the Logistic Regression model
+logreg_model = LogisticRegression(random_state=10)
+logreg_model.fit(train_pca, train_labels)
+
+# Save the trained model, scaler, and PCA
+joblib.dump(logreg_model, 'logistic_regression_model.pkl')
+joblib.dump(scaler, 'scaler.pkl')
+joblib.dump(pca, 'pca.pkl')
+
+
+import requests
+import numpy as np
+import librosa
+
+# Load the trained model, scaler, and PCA
+logreg_model = joblib.load('logistic_regression_model.pkl')
+scaler = joblib.load('scaler.pkl')
+pca = joblib.load('pca.pkl')
+
+def download_audio(url):
+    response = requests.get(url)
+    with open('temp_audio.mp3', 'wb') as f:
+        f.write(response.content)
+
+def extract_features_from_audio_librosa(file_path):
+    # Load audio file
+    y, sr = librosa.load(file_path, sr=None)
+    # Extract features (e.g., MFCCs)
+    features = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=6).mean(axis=1)
+    return features
+
+# URL of the public audio file (Hip-Hop or Rock)
+audio_url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
+download_audio(audio_url)
+
+# Extract features from the new audio file using librosa
+audio_features = extract_features_from_audio_librosa('temp_audio.mp3')
+
+# Preprocess the features
+scaled_features = scaler.transform([audio_features])
+pca_features = pca.transform(scaled_features)
+
+# Predict the genre
+predicted_genre = logreg_model.predict(pca_features)
+
+print('The predicted genre is: {}'.format(predicted_genre[0]))
+
+
